@@ -2,46 +2,50 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Category Rush</title>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<div id="toast"></div>
+<div id="toast" class="toast hidden"></div>
 <div id="challengeModal" class="modal hidden"></div>
 <main class="app">
-  <section id="joinScreen" class="hero card">
-    <div class="badge">⚡ Multiplayer word battle</div>
+  <section id="login" class="hero card">
+    <p class="pill">⚡ Multiplayer word battle</p>
     <h1>Category<br>Rush</h1>
-    <p>Think fast. Score big.</p>
-    <input id="playerName" placeholder="Your name" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    <p class="tagline">Think fast. Score big.</p>
+    <label>Your name</label>
+    <input id="nameInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Your name" />
     <button id="createBtn" class="primary">Create room</button>
-    <input id="roomInput" placeholder="Room code" maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" />
     <button id="joinBtn" class="secondary">Join room</button>
+    <input id="roomInput" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="Room code" maxlength="4" />
+    <p id="loginMsg" class="msg"></p>
   </section>
-
-  <section id="gameScreen" class="hidden layout">
-    <aside class="side card">
-      <h2>Category Rush</h2>
-      <div class="roomBig">Room <b id="roomCode">----</b></div>
-      <button id="copyBtn" class="small">Copy code</button>
-      <h3>Players</h3><div id="players"></div>
-      <h3>Leaderboard</h3><div id="leaderboard"></div>
+  <section id="game" class="hidden">
+    <aside class="sidebar card">
+      <h2>Players</h2><div id="players"></div>
+      <h2>Leaderboard</h2><div id="leaderboard"></div>
     </aside>
-    <section class="main card">
-      <div class="topbar">
-        <div><span class="label">Letter</span><div id="letter" class="letter">?</div><small id="usedLetters">Used: none</small></div>
-        <div class="actions"><button id="startBtn" class="primary">Start Round</button><button id="rushBtn" class="danger">RUSH!</button><button id="endRoundBtn" class="secondary">Score Now</button><button id="endGameBtn" class="ghost">End Game</button></div>
+    <section class="board">
+      <div class="top card">
+        <div><span class="label">Room code</span><strong id="roomCode">----</strong></div>
+        <div><span class="label">Letter</span><strong id="letter">?</strong></div>
+        <div><span class="label">Used</span><strong id="usedLetters">none</strong></div>
+      </div>
+      <div class="controls card">
+        <button id="startBtn" class="primary">Start Round</button>
+        <button id="rushBtn" class="danger">RUSH!</button>
+        <button id="endBtn" class="secondary">End Game</button>
+        <p id="status">Waiting for players.</p>
       </div>
       <div id="rushBanner" class="rush hidden"></div>
-      <p id="status" class="status">Create or join a room.</p>
-      <div class="answerGrid">
-        <label>Name<input data-cat="name" placeholder="Name" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></label>
-        <label>Animal<input data-cat="animal" placeholder="Animal" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></label>
-        <label>Place<input data-cat="place" placeholder="Country, city, state, province, region" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></label>
-        <label>Object<input data-cat="object" placeholder="Physical object" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></label>
-      </div>
-      <div id="results"></div>
+      <form id="answers" class="answers card">
+        <label>Name<input name="name" id="ansName" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" /></label>
+        <label>Animal<input name="animal" id="ansAnimal" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" /></label>
+        <label>Place<input name="place" id="ansPlace" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" /></label>
+        <label>Object<input name="object" id="ansObject" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" /></label>
+      </form>
+      <section id="results" class="card results"></section>
     </section>
   </section>
 </main>

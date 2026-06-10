@@ -1,9 +1,16 @@
 {
-  "name": "category-rush-proper-final",
-  "version": "1.0.0",
+  "name": "category-rush",
+  "version": "3.0.0",
   "description": "Category Rush multiplayer word game",
   "main": "server.js",
-  "scripts": {"start":"node server.js"},
-  "dependencies": {"express":"^4.18.2","socket.io":"^4.7.5"},
-  "engines": {"node": ">=18"}
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.3",
+    "socket.io": "^4.7.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }
