@@ -1,219 +1,153 @@
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
+const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
-const PORT = process.env.PORT || 3000;
 
-// Works on Render and locally. Frontend files live in the project root.
 app.use(express.static(__dirname));
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
+const PORT = process.env.PORT || 3000;
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const CATEGORIES = ['name', 'animal', 'place', 'object'];
-const bannedPlaceWords = ['street','road','avenue','lane','drive','close','court','way','shop','store','mall','tesco','asda','sainsbury','mcdonald','restaurant','airport','stadium','terminal','building'];
 
-function norm(v) {
-  return String(v || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, ' ').trim();
+function loadSet(file) {
+  try {
+    return new Set(fs.readFileSync(path.join(__dirname, file), 'utf8')
+      .split(/\r?\n/).map(normalise).filter(Boolean));
+  } catch { return new Set(); }
 }
-function title(v) { return String(v || '').trim(); }
-function readList(file, fallback = []) {
-  const candidates = [path.join(__dirname, 'data', file), path.join(__dirname, file)];
-  let values = [];
-  for (const p of candidates) {
-    if (fs.existsSync(p)) {
-      values = fs.readFileSync(p, 'utf8').split(/\r?\n/).map(norm).filter(Boolean);
-      break;
-    }
+const db = { name: loadSet('names.txt'), animal: loadSet('animals.txt'), place: loadSet('places.txt'), object: loadSet('objects.txt') };
+
+function normalise(s='') { return String(s).toLowerCase().trim().replace(/\s+/g, ' '); }
+function codeClean(s='') { return String(s).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6); }
+function makeCode() { let c=''; const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; for(let i=0;i<4;i++) c += chars[Math.floor(Math.random()*chars.length)]; return c; }
+function distance(a,b){
+  a=normalise(a); b=normalise(b); const m=a.length,n=b.length; if(Math.abs(m-n)>2) return 3;
+  const dp=Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=> i? (j?0:i):j));
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++) dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return dp[m][n];
+}
+function validate(category, answer, letter) {
+  const raw = answer || ''; const val = normalise(raw); const l = (letter||'').toLowerCase();
+  if (!val) return { status:'blank', valid:false, canonical:'', typo:false, reason:'Blank' };
+  if (!val.startsWith(l)) return { status:'wrong-letter', valid:false, canonical:val, typo:false, reason:`Does not start with ${letter}` };
+  const set = db[category] || new Set();
+  if (set.has(val)) return { status:'valid', valid:true, canonical:val, typo:false, reason:'Valid' };
+  // plural handling for objects/animals
+  if ((category === 'object' || category === 'animal') && val.endsWith('s') && set.has(val.slice(0,-1))) {
+    return { status:'valid', valid:true, canonical:val.slice(0,-1), typo:false, reason:'Plural accepted' };
   }
-  return new Set([...values, ...fallback.map(norm)].filter(Boolean));
-}
-
-const DB = {
-  name: readList('names.txt'),
-  animal: readList('animals.txt'),
-  place: readList('places.txt'),
-  object: readList('objects.txt')
-};
-
-function distance(a, b) {
-  if (!a || !b) return 99;
-  if (Math.abs(a.length - b.length) > 2) return 99;
-  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i]);
-  for (let j = 1; j <= b.length; j++) dp[0][j] = j;
-  for (let i = 1; i <= a.length; i++) {
-    for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
-    }
+  // relaxed place aliases: allow prefix if exact city has full official name e.g. frankfurt -> frankfurt am main
+  if (category === 'place') {
+    for (const item of set) if (item.startsWith(val + ' ') || val.startsWith(item + ' ')) return { status:'valid', valid:true, canonical:item, typo:false, reason:'Place alias accepted' };
   }
-  return dp[a.length][b.length];
-}
-function fuzzyFind(set, value) {
-  if (!value || value.length < 3) return null;
-  let best = null, bestDist = 3;
+  // typo match only same first letter and short distance
+  let best=null, bestD=3;
   for (const item of set) {
-    if (item[0] !== value[0]) continue;
-    const d = distance(value, item);
-    if (d < bestDist) { bestDist = d; best = item; if (d === 1) break; }
+    if (!item.startsWith(l)) continue;
+    const d = distance(val, item);
+    if (d < bestD) { bestD=d; best=item; if (d===1) break; }
   }
-  return best;
-}
-function singular(v) {
-  if (v.endsWith('ies')) return v.slice(0, -3) + 'y';
-  if (v.endsWith('es')) return v.slice(0, -2);
-  if (v.endsWith('s') && v.length > 3) return v.slice(0, -1);
-  return v;
-}
-function validate(category, raw, letter) {
-  const v = norm(raw);
-  if (!v) return { ok: false, canonical: '', typo: false, reason: 'Blank answer' };
-  if (letter && v[0] !== letter.toLowerCase()) return { ok: false, canonical: v, typo: false, reason: `Must start with ${letter}` };
-  if (category === 'place' && bannedPlaceWords.some(w => v.includes(w))) return { ok: false, canonical: v, typo: false, reason: 'Streets, shops, buildings and venues do not count' };
-  const set = DB[category] || new Set();
-  if (set.has(v)) return { ok: true, canonical: v, typo: false, reason: 'Valid' };
-  const sv = singular(v);
-  if (set.has(sv)) return { ok: true, canonical: sv, typo: false, reason: 'Valid plural/singular' };
-  const match = fuzzyFind(set, v);
-  if (match) return { ok: true, canonical: match, typo: true, reason: `Spelling close to ${match}` };
-  // Accept reasonable two-word physical object phrases if second word is known object.
-  if (category === 'object' && v.includes(' ')) {
-    const last = v.split(' ').pop();
-    if (set.has(last) || set.has(singular(last))) return { ok: true, canonical: v, typo: false, reason: 'Valid physical object phrase' };
-  }
-  // Places should not be too strict: allow capitalised/simple geographical-sounding names via challenge, not direct full points.
-  return { ok: false, canonical: v, typo: false, reason: category === 'place' ? 'Not in place database; challenge if it is a real city/state/province/region/country' : `Not a recognised ${category}` };
-}
-function makeCode() {
-  let code;
-  do code = Array.from({ length: 4 }, () => LETTERS[Math.floor(Math.random() * LETTERS.length)]).join(''); while (rooms.has(code));
-  return code;
-}
-function publicRoom(room) {
-  return {
-    code: room.code,
-    hostId: room.hostId,
-    players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, score: p.score })),
-    status: room.status,
-    letter: room.letter,
-    usedLetters: room.usedLetters,
-    countdown: room.countdown,
-    results: room.results || null,
-    final: room.final || null,
-    challenge: room.challenge || null
-  };
-}
-function emitRoom(room) { io.to(room.code).emit('room:update', publicRoom(room)); }
-function scoreRoom(room) {
-  const submissions = [...room.players.values()].map(p => ({ player: p, answers: p.answers || {} }));
-  const validations = {};
-  const counts = {};
-  for (const { player, answers } of submissions) {
-    validations[player.id] = {};
-    for (const cat of CATEGORIES) {
-      const val = validate(cat, answers[cat], room.letter);
-      validations[player.id][cat] = val;
-      if (val.ok) counts[`${cat}:${val.canonical}`] = (counts[`${cat}:${val.canonical}`] || 0) + 1;
-    }
-  }
-  const results = [];
-  for (const { player, answers } of submissions) {
-    let total = 0;
-    const rows = {};
-    for (const cat of CATEGORIES) {
-      const val = validations[player.id][cat];
-      let points = 0;
-      if (val.ok) {
-        points = counts[`${cat}:${val.canonical}`] > 1 ? 5 : 10;
-        if (val.typo) points = Math.max(0, points - 1);
-      }
-      rows[cat] = { answer: title(answers[cat]), ...val, points };
-      total += points;
-    }
-    player.score += total;
-    results.push({ playerId: player.id, name: player.name, total, rows, score: player.score });
-  }
-  room.results = results;
-  room.status = 'results';
+  if (best && bestD <= 1) return { status:'typo', valid:true, canonical:best, typo:true, reason:`Typo of ${best}` };
+  return { status:'invalid', valid:false, canonical:val, typo:false, reason:'Not in database' };
 }
 
 const rooms = new Map();
+function publicRoom(room) {
+  return {
+    code: room.code, hostId: room.hostId, status: room.status, letter: room.letter,
+    usedLetters: room.usedLetters, rush: room.rush, scores: room.scores,
+    players: Object.fromEntries(Object.entries(room.players).map(([id,p])=>[id,{id,name:p.name,score:p.score,connected:p.connected,answers:p.answers||{}}])),
+    results: room.results || null, challenges: room.challenges || []
+  };
+}
+function emitRoom(code){ const room=rooms.get(code); if(room) io.to(code).emit('room-state', publicRoom(room)); }
+function getRoom(code){ return rooms.get(codeClean(code)); }
 
 io.on('connection', socket => {
-  socket.on('room:create', ({ name }, cb) => {
-    const code = makeCode();
-    const player = { id: socket.id, name: title(name) || 'Player', score: 0, answers: {} };
-    const room = { code, hostId: socket.id, players: new Map([[socket.id, player]]), status: 'lobby', letter: null, usedLetters: [], countdown: null, results: null, final: null, challenge: null };
-    rooms.set(code, room);
-    socket.join(code); socket.data.roomCode = code;
-    cb && cb({ ok: true, code, playerId: socket.id });
-    emitRoom(room);
+  socket.on('create-room', ({ name }, cb=()=>{}) => {
+    let code; do code=makeCode(); while(rooms.has(code));
+    const room = { code, hostId: socket.id, players:{}, scores:{}, status:'lobby', letter:null, usedLetters:[], rush:null, results:null, challenges:[] };
+    room.players[socket.id] = { id:socket.id, name:(name||'Player').trim()||'Player', score:0, connected:true, answers:{} };
+    room.scores[socket.id] = 0; rooms.set(code, room); socket.join(code); socket.data.roomCode=code;
+    cb({ ok:true, code, playerId:socket.id }); emitRoom(code);
   });
-  socket.on('room:join', ({ code, name }, cb) => {
-    code = String(code || '').trim().toUpperCase();
-    const room = rooms.get(code);
-    if (!room) return cb && cb({ ok: false, error: 'Room not found' });
-    const player = { id: socket.id, name: title(name) || 'Player', score: 0, answers: {} };
-    room.players.set(socket.id, player);
-    socket.join(code); socket.data.roomCode = code;
-    cb && cb({ ok: true, code, playerId: socket.id });
-    emitRoom(room);
+
+  socket.on('join-room', ({ code, name }, cb=()=>{}) => {
+    const clean = codeClean(code); const room = rooms.get(clean);
+    if (!room) return cb({ ok:false, error:'Room not found' });
+    room.players[socket.id] = { id:socket.id, name:(name||'Player').trim()||'Player', score:room.scores[socket.id]||0, connected:true, answers:{} };
+    room.scores[socket.id] = room.scores[socket.id] || 0; socket.join(clean); socket.data.roomCode=clean;
+    cb({ ok:true, code:clean, playerId:socket.id }); emitRoom(clean);
   });
-  socket.on('round:start', (_data, cb) => {
-    const room = rooms.get(socket.data.roomCode);
-    if (!room || room.hostId !== socket.id) return cb && cb({ ok: false, error: 'Only host can start' });
-    const available = LETTERS.filter(l => !room.usedLetters.includes(l));
-    if (!available.length) return cb && cb({ ok: false, error: 'All letters used' });
-    room.letter = available[Math.floor(Math.random() * available.length)];
-    room.usedLetters.push(room.letter);
-    room.status = 'playing'; room.results = null; room.final = null; room.challenge = null; room.countdown = null;
-    for (const p of room.players.values()) p.answers = {};
-    cb && cb({ ok: true }); emitRoom(room);
+
+  socket.on('start-round', (cb=()=>{}) => {
+    const room = getRoom(socket.data.roomCode); if(!room) return cb({ok:false,error:'No room'});
+    if(room.hostId!==socket.id) return cb({ok:false,error:'Only host can start'});
+    const left = LETTERS.filter(l=>!room.usedLetters.includes(l));
+    if(!left.length) return cb({ok:false,error:'All letters used'});
+    const letter = left[Math.floor(Math.random()*left.length)]; room.letter=letter; room.usedLetters.push(letter); room.status='playing'; room.results=null; room.challenges=[]; room.rush=null;
+    Object.values(room.players).forEach(p=>p.answers={}); cb({ok:true}); emitRoom(room.code);
   });
-  socket.on('answers:update', answers => {
-    const room = rooms.get(socket.data.roomCode); if (!room) return;
-    const player = room.players.get(socket.id); if (!player || room.status !== 'playing') return;
-    player.answers = { ...player.answers, ...answers };
+
+  socket.on('answer-update', ({ category, value }) => {
+    const room=getRoom(socket.data.roomCode); if(!room || room.status!=='playing') return;
+    if(!CATEGORIES.includes(category)) return; const p=room.players[socket.id]; if(!p) return;
+    p.answers[category]=String(value||'').slice(0,80); emitRoom(room.code);
   });
-  socket.on('rush', () => {
-    const room = rooms.get(socket.data.roomCode); if (!room || room.status !== 'playing' || room.countdown) return;
-    room.countdown = 5; emitRoom(room);
-    const interval = setInterval(() => {
-      if (!rooms.has(room.code)) return clearInterval(interval);
-      room.countdown -= 1;
-      if (room.countdown <= 0) { clearInterval(interval); room.countdown = null; scoreRoom(room); }
-      emitRoom(room);
-    }, 1000);
+
+  socket.on('rush', (cb=()=>{}) => {
+    const room=getRoom(socket.data.roomCode); if(!room || room.status!=='playing') return cb({ok:false,error:'No active round'});
+    const p=room.players[socket.id]; if(!p) return cb({ok:false,error:'Player missing'});
+    if(room.rush) return cb({ok:false,error:'Rush already active'});
+    room.rush = { byId:socket.id, byName:p.name, endsAt: Date.now()+5000 };
+    io.to(room.code).emit('rush-started', room.rush); emitRoom(room.code);
+    setTimeout(()=>{ const r=rooms.get(room.code); if(r && r.status==='playing' && r.rush?.byId===socket.id) finishRound(r); }, 5100);
+    cb({ok:true});
   });
-  socket.on('challenge:create', ({ playerId, category }) => {
-    const room = rooms.get(socket.data.roomCode); if (!room || room.status !== 'results') return;
-    const result = room.results.find(r => r.playerId === playerId); if (!result || !result.rows[category]) return;
-    room.challenge = { id: Date.now().toString(), challengerId: socket.id, playerId, category, answer: result.rows[category].answer, votes: {} };
-    emitRoom(room);
+
+  socket.on('end-game', () => { const room=getRoom(socket.data.roomCode); if(!room || room.hostId!==socket.id) return; room.status='ended'; finishRound(room, true); });
+
+  socket.on('challenge-answer', ({ targetId, category }, cb=()=>{}) => {
+    const room=getRoom(socket.data.roomCode); if(!room || !room.results) return cb({ok:false,error:'No results to challenge'});
+    if(!room.players[targetId] || !CATEGORIES.includes(category)) return cb({ok:false,error:'Invalid challenge'});
+    const challenger=room.players[socket.id]; if(!challenger) return cb({ok:false,error:'Missing player'});
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+    const challenge = { id, challengerId:socket.id, challengerName:challenger.name, targetId, targetName:room.players[targetId].name, category, answer:room.players[targetId].answers[category]||'', votes:{}, open:true };
+    room.challenges.push(challenge); io.to(room.code).emit('challenge-popup', challenge); emitRoom(room.code); cb({ok:true});
   });
-  socket.on('challenge:vote', ({ vote }) => {
-    const room = rooms.get(socket.data.roomCode); if (!room || !room.challenge) return;
-    if (room.challenge.challengerId === socket.id) return;
-    if (!['count','reject'].includes(vote)) return;
-    room.challenge.votes[socket.id] = vote;
-    emitRoom(room);
+
+  socket.on('vote-challenge', ({ challengeId, vote }, cb=()=>{}) => {
+    const room=getRoom(socket.data.roomCode); if(!room) return cb({ok:false,error:'No room'});
+    const ch=room.challenges.find(c=>c.id===challengeId); if(!ch || !ch.open) return cb({ok:false,error:'Challenge closed'});
+    if(socket.id===ch.challengerId || socket.id===ch.targetId) return cb({ok:false,error:'You cannot vote on this challenge'});
+    ch.votes[socket.id] = vote === 'valid' ? 'valid' : 'invalid'; cb({ok:true}); emitRoom(room.code);
   });
-  socket.on('game:end', () => {
-    const room = rooms.get(socket.data.roomCode); if (!room || room.hostId !== socket.id) return;
-    room.status = 'ended'; room.final = [...room.players.values()].map(p => ({ id: p.id, name: p.name, score: p.score })).sort((a,b)=>b.score-a.score);
-    emitRoom(room);
-  });
-  socket.on('disconnect', () => {
-    const code = socket.data.roomCode; const room = rooms.get(code); if (!room) return;
-    room.players.delete(socket.id);
-    if (!room.players.size) rooms.delete(code);
-    else { if (room.hostId === socket.id) room.hostId = room.players.keys().next().value; emitRoom(room); }
-  });
+
+  socket.on('disconnect', () => { const room=getRoom(socket.data.roomCode); if(room?.players[socket.id]) { room.players[socket.id].connected=false; emitRoom(room.code); } });
 });
+
+function finishRound(room, end=false) {
+  room.status = end ? 'ended' : 'results'; room.rush=null;
+  const results = {}; const byCat = {};
+  for (const cat of CATEGORIES) {
+    byCat[cat] = {};
+    for (const [pid,p] of Object.entries(room.players)) {
+      const v=validate(cat, p.answers?.[cat]||'', room.letter); results[pid] ||= {}; results[pid][cat] = { answer:p.answers?.[cat]||'', ...v, points:0 };
+      if(v.valid) (byCat[cat][v.canonical] ||= []).push(pid);
+    }
+  }
+  for (const cat of CATEGORIES) for (const ids of Object.values(byCat[cat])) {
+    const base = ids.length > 1 ? 5 : 10;
+    for (const pid of ids) { const cell=results[pid][cat]; cell.points = Math.max(0, base - (cell.typo ? 1 : 0)); room.scores[pid]=(room.scores[pid]||0)+cell.points; room.players[pid].score=room.scores[pid]; }
+  }
+  room.results = results; emitRoom(room.code);
+}
 
 server.listen(PORT, '0.0.0.0', () => console.log(`Category Rush running on port ${PORT}`));

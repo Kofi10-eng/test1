@@ -1,12 +1,7 @@
 # Category Rush
-Multiplayer category word game.
 
-## Run locally
-npm install
-npm start
+Multiplayer word/category game built with Node.js, Express and Socket.IO.
 
-Open http://localhost:3000
-
-## Render
-Build Command: npm install --package-lock=false
+Render:
+Build Command: npm install
 Start Command: node server.js

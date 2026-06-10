@@ -1,1 +1,36 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>Category Rush</title><link rel="stylesheet" href="/style.css"></head><body><main id="app"><section id="home" class="screen active"><div class="hero"><div class="pill">⚡ Multiplayer word battle</div><h1>Category<br>Rush</h1><p>Think fast. Score big.</p><div class="card"><label>Your name</label><input id="name" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Enter name"><button id="create">Create room</button><button id="join">Join room</button><input id="code" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" placeholder="Room code"><b id="homeMsg"></b></div></div></section><section id="game" class="screen"><div class="top card"><div><small>ROOM CODE</small><h2 id="roomCode">----</h2></div><button id="copy">Copy code</button><button id="start">Start round</button><button id="end">End game</button></div><div class="grid"><div class="card"><small>RANDOM LETTER</small><div id="letter">?</div><p>Used letters: <span id="used">none</span></p></div><div class="card"><small>ROUND STATUS</small><h2 id="status">Start when everyone has joined</h2><div id="countdown"></div></div></div><div class="card"><small>YOUR ANSWERS</small><h2>Fill all 4 categories</h2><p class="tag">Auto-saves</p><input class="ans" data-cat="name" placeholder="👤 Name" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><input class="ans" data-cat="animal" placeholder="🦁 Animal" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><input class="ans" data-cat="place" placeholder="🌍 Place" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><input class="ans" data-cat="object" placeholder="📦 Object" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"><button id="rush" class="rush">RUSH!</button></div><div class="card"><small>PLAYERS / LEADERBOARD</small><div id="players"></div></div><div class="card" id="resultsCard"><small>RESULTS</small><div id="results"></div></div></section></main><div id="modal" class="modal hidden"><div class="box"><h2>⚠️ Challenge</h2><p id="challengeText"></p><button id="voteCount">Count it</button><button id="voteReject">Reject</button><button id="closeModal">Close</button></div></div><script src="/socket.io/socket.io.js"></script><script src="/script.js"></script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/><title>Category Rush</title><link rel="stylesheet" href="style.css"/></head><body>
+<div class="bg"></div>
+<main class="app">
+  <section class="hero" id="joinView">
+    <div class="brand"><span>⚡</span><div><h1>Category Rush</h1><p>Think fast. Score big.</p></div></div>
+    <div class="panel glass">
+      <label>Your name</label><input id="nameInput" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="e.g. Kofi" maxlength="20"/>
+      <button id="createBtn" class="primary">Create Room</button>
+      <div class="joinLine"><input id="roomInput" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="ROOM CODE" maxlength="6"/><button id="joinBtn">Join</button></div>
+      <p id="joinError" class="error"></p>
+    </div>
+  </section>
+
+  <section id="gameView" class="hidden">
+    <header class="topbar glass"><div><h2>Category Rush</h2><p>Room <b id="roomCode">----</b></p></div><div class="letter"><small>Letter</small><strong id="letterBox">?</strong></div></header>
+    <div id="notice" class="notice hidden"></div>
+    <div id="rushBanner" class="rushBanner hidden"><div>🚨 <b id="rushName">Someone</b> started the Rush!</div><strong id="rushCount">5</strong></div>
+    <div class="grid">
+      <aside class="glass side"><h3>Players</h3><div id="players"></div><h3>Leaderboard</h3><div id="leaderboard"></div><h3>Used Letters</h3><div id="usedLetters" class="chips"></div></aside>
+      <section class="glass board">
+        <div class="controls"><button id="startBtn" class="primary">Start Round</button><button id="rushBtn" class="danger">RUSH!</button><button id="endBtn">End Game</button></div>
+        <p id="statusText" class="status">Waiting in lobby…</p>
+        <div class="answers">
+          <label>Name<input data-cat="name" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Name"/></label>
+          <label>Animal<input data-cat="animal" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Animal"/></label>
+          <label>Place<input data-cat="place" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="City, country, state, province, region"/></label>
+          <label>Object<input data-cat="object" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Physical object"/></label>
+        </div>
+        <div id="results" class="results"></div>
+      </section>
+    </div>
+  </section>
+</main>
+<div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="x">×</button><h2>⚠️ Challenge</h2><p id="modalText"></p><div id="voteBtns"><button id="voteValid" class="primary">Count It</button><button id="voteInvalid" class="danger">Reject</button></div><p id="modalHint"></p></div></div>
+<script src="/socket.io/socket.io.js"></script><script src="script.js"></script>
+</body></html>
