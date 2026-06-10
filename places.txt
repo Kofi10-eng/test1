@@ -1,0 +1,138 @@
+frankfurt
+frankfurt am main
+spain
+germany
+ghana
+england
+scotland
+wales
+ireland
+united kingdom
+united states
+canada
+france
+italy
+portugal
+nigeria
+kenya
+south africa
+gambia
+senegal
+morocco
+egypt
+ethiopia
+india
+china
+japan
+brazil
+argentina
+mexico
+london
+manchester
+birmingham
+liverpool
+leeds
+bristol
+colchester
+bexleyheath
+abbey wood
+harrow
+essex
+kent
+surrey
+greater london
+greater accra
+ashanti region
+kumasi
+accra
+cape coast
+tamale
+takoradi
+lagos
+abuja
+kano
+gabasawa
+gaborone
+gauteng
+gujarat
+ontario
+quebec
+california
+texas
+florida
+new york
+new york city
+los angeles
+chicago
+houston
+miami
+seattle
+boston
+philadelphia
+paris
+marseille
+lyon
+berlin
+munich
+hamburg
+bavaria
+madrid
+barcelona
+valencia
+lisbon
+porto
+rome
+milan
+naples
+tokyo
+osaka
+kyoto
+beijing
+shanghai
+hong kong
+singapore
+dubai
+abu dhabi
+doha
+riyadh
+jeddah
+istanbul
+ankara
+athens
+amsterdam
+rotterdam
+brussels
+antwerp
+zurich
+geneva
+vienna
+prague
+warsaw
+krakow
+budapest
+bucharest
+sofia
+copenhagen
+stockholm
+oslo
+helsinki
+reykjavik
+dublin
+cork
+belfast
+cardiff
+edinburgh
+glasgow
+newcastle
+nottingham
+sheffield
+southampton
+portsmouth
+brighton
+oxford
+cambridge
+norwich
+chelmsford
+ipswich
+maidstone
+canterbury
