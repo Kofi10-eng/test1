@@ -1,15 +1,16 @@
 # Category Rush
 
-Multiplayer category word game.
+Run locally:
 
-## Render settings
-
-Build command:
 ```bash
 npm install
+npm start
 ```
 
-Start command:
-```bash
-node server.js
-```
+Open http://localhost:3000
+
+Deploy on Railway/Render:
+- Build: npm install
+- Start: node server.js
+
+Do not upload node_modules.

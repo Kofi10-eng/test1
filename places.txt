@@ -1,503 +1,75 @@
-Afghanistan
-Albania
-Algeria
-Andorra
-Angola
-Antigua and Barbuda
-Argentina
-Armenia
-Australia
-Austria
-Azerbaijan
-Bahamas
-Bahrain
-Bangladesh
-Barbados
-Belarus
-Belgium
-Belize
-Benin
-Bhutan
-Bolivia
-Bosnia and Herzegovina
-Botswana
-Brazil
-Brunei
-Bulgaria
-Burkina Faso
-Burundi
-Cambodia
-Cameroon
-Canada
-Cape Verde
-Central African Republic
-Chad
-Chile
-China
-Colombia
-Comoros
-Congo
-Costa Rica
-Croatia
-Cuba
-Cyprus
-Czech Republic
-Denmark
-Djibouti
-Dominica
-Dominican Republic
-Ecuador
-Egypt
-El Salvador
-Equatorial Guinea
-Eritrea
-Estonia
-Eswatini
-Ethiopia
-Fiji
-Finland
-France
-Gabon
-Gambia
-Georgia
-Germany
-Ghana
-Greece
-Grenada
-Guatemala
-Guinea
-Guinea-Bissau
-Guyana
-Haiti
-Honduras
-Hungary
-Iceland
-India
-Indonesia
-Iran
-Iraq
-Ireland
-Israel
-Italy
-Ivory Coast
-Jamaica
-Japan
-Jordan
-Kazakhstan
-Kenya
-Kiribati
-Kuwait
-Kyrgyzstan
-Laos
-Latvia
-Lebanon
-Lesotho
-Liberia
-Libya
-Liechtenstein
-Lithuania
-Luxembourg
-Madagascar
-Malawi
-Malaysia
-Maldives
-Mali
-Malta
-Marshall Islands
-Mauritania
-Mauritius
-Mexico
-Micronesia
-Moldova
-Monaco
-Mongolia
-Montenegro
-Morocco
-Mozambique
-Myanmar
-Namibia
-Nauru
-Nepal
-Netherlands
-New Zealand
-Nicaragua
-Niger
-Nigeria
-North Korea
-North Macedonia
-Norway
-Oman
-Pakistan
-Palau
-Palestine
-Panama
-Papua New Guinea
-Paraguay
-Peru
-Philippines
-Poland
-Portugal
-Qatar
-Romania
-Russia
-Rwanda
-Saint Kitts and Nevis
-Saint Lucia
-Saint Vincent and the Grenadines
-Samoa
-San Marino
-Sao Tome and Principe
-Saudi Arabia
-Senegal
-Serbia
-Seychelles
-Sierra Leone
-Singapore
-Slovakia
-Slovenia
-Solomon Islands
-Somalia
-South Africa
-South Korea
-South Sudan
-Spain
-Sri Lanka
-Sudan
-Suriname
-Sweden
-Switzerland
-Syria
-Taiwan
-Tajikistan
-Tanzania
-Thailand
-Timor-Leste
-Togo
-Tonga
-Trinidad and Tobago
-Tunisia
-Turkey
-Turkmenistan
-Tuvalu
-Uganda
-Ukraine
-United Arab Emirates
-United Kingdom
-United States
-Uruguay
-Uzbekistan
-Vanuatu
-Vatican City
-Venezuela
-Vietnam
-Yemen
-Zambia
-Zimbabwe
-London
-Birmingham
-Manchester
-Liverpool
-Leeds
-Sheffield
-Bristol
-Nottingham
-Leicester
-Coventry
-Bradford
-Cardiff
-Edinburgh
-Glasgow
-Aberdeen
-Dundee
-Colchester
-Bexleyheath
-Harrow
-Frankfurt
-Frankfurt am Main
-Berlin
-Munich
-Hamburg
-Cologne
-Stuttgart
-Dusseldorf
-Dortmund
-Essen
-Leipzig
-Bremen
-Dresden
-Hanover
-Nuremberg
-Paris
-Marseille
-Lyon
-Toulouse
-Nice
-Nantes
-Strasbourg
-Madrid
-Barcelona
-Valencia
-Seville
-Zaragoza
-Malaga
-Rome
-Milan
-Naples
-Turin
-Palermo
-Genoa
-Venice
-Lisbon
-Porto
-Amsterdam
-Rotterdam
-The Hague
-Brussels
-Antwerp
-Vienna
-Salzburg
-Zurich
-Geneva
-Bern
-Stockholm
-Gothenburg
-Oslo
-Copenhagen
-Helsinki
-Reykjavik
-Dublin
-Cork
-Warsaw
-Krakow
-Gdansk
-Prague
-Budapest
-Bucharest
-Sofia
-Belgrade
-Zagreb
-Sarajevo
-Skopje
-Tirana
-Athens
-Istanbul
-Ankara
-Izmir
-Moscow
-Saint Petersburg
-Kyiv
-Lviv
-Minsk
-Riga
-Tallinn
-Vilnius
-New York
-Los Angeles
-Chicago
-Houston
-Phoenix
-Philadelphia
-San Antonio
-San Diego
-Dallas
-San Jose
-Austin
-Jacksonville
-Fort Worth
-Columbus
-Charlotte
-Indianapolis
-San Francisco
-Seattle
-Denver
-Washington
-Boston
-Nashville
-Detroit
-Portland
-Las Vegas
-Miami
-Atlanta
-Toronto
-Montreal
-Vancouver
-Calgary
-Ottawa
-Edmonton
-Winnipeg
-Quebec
-Mexico City
-Guadalajara
-Monterrey
-Tijuana
-Havana
-Kingston
-Santo Domingo
-Port-au-Prince
-Accra
-Kumasi
-Tamale
-Cape Coast
-Tema
-Takoradi
-Sunyani
-Ho
-Koforidua
-Wa
-Bolgatanga
-Lagos
-Abuja
-Kano
-Ibadan
-Port Harcourt
-Benin City
-Kaduna
-Enugu
-Gabasawa
-Gaborone
-Johannesburg
-Cape Town
-Durban
-Pretoria
-Bloemfontein
-Nairobi
-Mombasa
-Kisumu
-Kampala
-Entebbe
-Dar es Salaam
-Dodoma
-Arusha
-Addis Ababa
-Cairo
-Alexandria
-Giza
-Casablanca
-Rabat
-Marrakesh
-Tunis
-Algiers
-Dakar
-Bamako
-Abidjan
-Yamoussoukro
-Monrovia
-Freetown
-Conakry
-Banjul
-Lusaka
-Harare
-Luanda
-Maputo
-Windhoek
-Khartoum
-Juba
-Beijing
-Shanghai
-Guangzhou
-Shenzhen
-Chengdu
-Wuhan
-Xi'an
-Nanjing
-Hangzhou
-Tianjin
-Tokyo
-Osaka
-Kyoto
-Yokohama
-Nagoya
-Sapporo
-Seoul
-Busan
-Incheon
-Daegu
-Mumbai
-Delhi
-Bengaluru
-Hyderabad
-Ahmedabad
-Chennai
-Kolkata
-Pune
-Jaipur
-Surat
-Lahore
-Karachi
-Islamabad
-Dhaka
-Chittagong
-Kathmandu
-Colombo
-Bangkok
-Chiang Mai
-Phuket
-Hanoi
-Ho Chi Minh City
-Da Nang
-Phnom Penh
-Jakarta
-Surabaya
-Bandung
-Kuala Lumpur
-George Town
-Manila
-Quezon City
-Cebu
-Sydney
-Melbourne
-Brisbane
-Perth
-Adelaide
-Canberra
-Auckland
-Wellington
-Christchurch
-Buenos Aires
-Cordoba
-Rosario
-Santiago
-Valparaiso
-Lima
-Cusco
-Bogota
-Medellin
-Cali
-Quito
-Guayaquil
-Caracas
-Montevideo
-Asuncion
-La Paz
-Sucre
-Sao Paulo
-Rio de Janeiro
-Brasilia
-Salvador
-Fortaleza
-Belo Horizonte
-California
-Texas
-Florida
-New York State
-Ontario
-Bavaria
-Hesse
-Greater Accra
-Ashanti Region
-Gauteng
-Gujarat
-Punjab
-Bengal
-Queensland
-Victoria
-New South Wales
-Essex
-Kent
-Surrey
-Lancashire
-Yorkshire
-Wales
-Scotland
-England
-Northern Ireland
+denmark
+spain
+frankfurt
+frankfurt am main
+ghana
+accra
+kumasi
+gabasawa
+gaborone
+gauteng
+gujarat
+greater accra
+greater accra region
+london
+colchester
+bexleyheath
+essex
+kent
+manchester
+birmingham
+oxford
+cambridge
+cardiff
+glasgow
+edinburgh
+england
+scotland
+wales
+ireland
+france
+paris
+germany
+berlin
+munich
+hamburg
+italy
+rome
+milan
+portugal
+lisbon
+netherlands
+amsterdam
+belgium
+brussels
+nigeria
+lagos
+abuja
+kenya
+nairobi
+south africa
+johannesburg
+cape town
+canada
+ontario
+quebec
+toronto
+united states
+usa
+new york
+california
+texas
+florida
+china
+beijing
+shanghai
+india
+mumbai
+delhi
+japan
+tokyo
+brazil
+argentina
+australia
+sydney
+melbourne

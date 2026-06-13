@@ -1,171 +1,183 @@
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
+const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, { cors: { origin: '*' }, pingTimeout: 30000, pingInterval: 10000 });
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static(__dirname));
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/health', (_req, res) => res.json({ ok: true, rooms: rooms.size }));
 
-const CATEGORIES = ['name', 'animal', 'place', 'object'];
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(l => !['Q','X','Z'].includes(l));
-const rooms = new Map();
-
-function norm(v) {
-  return String(v || '')
-    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase().replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, ' ').trim();
-}
-function title(v) { return String(v || '').trim().replace(/\b\w/g, c => c.toUpperCase()); }
-function readSet(file, fallback = []) {
+function norm(s='') { return String(s).trim().replace(/\s+/g, ' ').toLowerCase(); }
+function title(s='') { return norm(s).replace(/\b\w/g, c => c.toUpperCase()); }
+function readSet(file, fallback=[]) {
   const p = path.join(__dirname, file);
-  const list = fs.existsSync(p) ? fs.readFileSync(p, 'utf8').split(/\r?\n/) : fallback;
-  return new Set(list.map(norm).filter(Boolean));
+  const lines = fs.existsSync(p) ? fs.readFileSync(p, 'utf8').split(/\r?\n/) : [];
+  return new Set([...fallback, ...lines].map(norm).filter(Boolean));
 }
-const DB = {
-  name: readSet('names.txt'), animal: readSet('animals.txt'), place: readSet('places.txt'), object: readSet('objects.txt')
-};
-const BLOCKED_PLACES = ['street','road','avenue','lane','drive','close','way','tesco','asda','aldi','lidl','shop','store','mall','mcdonald','kfc','airport','stadium','station','terminal','building','house','hotel','restaurant'];
-const ABSTRACT_OBJECTS = ['love','law','idea','dream','thought','air','music','time','hope','fear','anger','truth','justice','freedom','happiness'];
 
-function singular(v) { return v.endsWith('s') && v.length > 3 ? v.slice(0, -1) : v; }
-function dist(a, b) {
-  if (Math.abs(a.length - b.length) > 2) return 99;
-  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i]);
-  for (let j = 1; j <= b.length; j++) dp[0][j] = j;
-  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
-    dp[i][j] = Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
-  }
-  return dp[a.length][b.length];
+const BASE_NAMES = `aaron abigail ada adam adams adwoa afia agnes ahmed akua akwasi albert alex alexander ali alice ama amelia aminata andrew angelina anna anthony arthur asante asare ayesha benjamin brian charles chris christopher daniel dante david deborah dorcas edward elizabeth emmanuel esther evelyn fatima felix francis frank george grace hannah harriet henry isaac isabella james janet jessica joel john joseph joshua juliet justice karen kofi kwame kwesi linda mary michael nana nathaniel osman owusu patrick paul peter philip princess richard robert rose sarah sarpong smith stephen susan thomas victoria william yaw yeboah`.split(/\s+/);
+const BASE_ANIMALS = `aardvark albatross alligator alpaca ant anteater antelope ape armadillo badger bat bear beaver bee beetle bison boar buffalo butterfly camel cat cheetah chicken chimpanzee cobra cow crab crocodile deer dog dolphin donkey duck eagle eel elephant falcon ferret fish flamingo fox frog gazelle gecko gerbil giraffe goat gorilla hamster hare hawk hedgehog hippo horse jaguar kangaroo koala leopard lion lizard llama lobster monkey mouse octopus ostrich otter owl panda panther parrot penguin pig rabbit raccoon rat raven rhino salmon seal shark sheep snake spider squid squirrel swan tiger turkey turtle whale wolf zebra`.split(/\s+/);
+const BASE_PLACES = `accra abuja addis ababa africa alabama alaska albania algeria amsterdam andorra angola argentina arizona arkansas asia athens australia austria bahrain bangladesh barcelona bavaria beijing belgium benin berlin bexleyheath birmingham bolivia brazil bristol brussels california cambridge canada cardiff chile china colchester congo copenhagen croatia denmark doha dublin egypt england essex ethiopia europe finland frankfurt frankfurt am main france gaborone gabasawa ghana glasgow greater accra greater accra region greece guangdong guatemala gujarat hamburg harrow india indonesia iran iraq ireland israel italy jamaica japan johannesburg kent kenya kumasi lagos leeds lisbon london madrid manchester mexico milan morocco mumbai munich nairobi new york nigeria ontario oxford paris portugal quebec rome scotland seoul spain stockholm sydney taiwan tokyo toronto turkey uganda united kingdom united states usa wales warsaw yamoussoukro zambia zurich`.split(/\n|,/).join(' ').split(/\s{2,}/);
+const BASE_OBJECTS = `air fryer alarm anchor apron axe bag ball balloon banana battery bed belt bicycle bin blender book bottle bowl box bracelet broom brush bucket button cable calculator camera candle cap car card carpet chair charger clock coat comb computer cup curtain desk door drill drum fan file flag fork fridge frying pan generator glasses gloves glue guitar hammer hat headphones helmet ink ink cartridge iron jacket jug kettle key keyboard kite knife lamp laptop lighter lock mirror mug nail necklace notebook oven paint pan paper pen pencil phone pillow plate printer radio ring rope ruler saw scarf scissors shirt shoe sofa spoon table tablet television toothbrush torch towel toy train tray umbrella wallet watch wheel window`.split(/\n|,/).join(' ').split(/\s{2,}|\s(?=[a-z]+\s)/).filter(Boolean);
+
+const names = readSet('names.txt', BASE_NAMES);
+const animals = readSet('animals.txt', BASE_ANIMALS);
+const places = readSet('places.txt', BASE_PLACES);
+const objects = readSet('objects.txt', BASE_OBJECTS);
+
+// Generate many practical physical object phrases without massive files.
+const objectBases = ['camera','phone','case','charger','bottle','bag','box','book','pen','pencil','keyboard','mouse','chair','table','lamp','cup','mug','plate','knife','spoon','fork','shoe','shirt','jacket','hat','watch','ring','ball','kite','ink','paint','paper','card','cable','speaker','screen','remote','controller','toy','food','tin','jar','brush','comb','mirror','towel'];
+const brands = ['nikon','canon','sony','samsung','apple','dell','hp','lenovo','adidas','nike','puma','gucci','lg','tesco'];
+const modifiers = ['red','blue','black','white','small','large','plastic','metal','wooden','glass','paper','cat','dog','baby','water','coffee','football','kitchen','school'];
+for (const b of brands) for (const o of objectBases) objects.add(`${b} ${o}`);
+for (const m of modifiers) for (const o of objectBases) objects.add(`${m} ${o}`);
+
+const bannedPlaceWords = new Set(['street','road','avenue','lane','drive','close','shop','store','tesco','walmart','mcdonalds','mall','airport','stadium','terminal','building','warehouse']);
+const broadNotAllowed = new Set(['east africa','west africa','north africa','south africa','sub saharan africa','middle east']);
+
+const rooms = new Map();
+const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+function code() { let c; do { c = Math.random().toString(36).slice(2,6).toUpperCase(); } while (rooms.has(c)); return c; }
+function getRoom(roomCode) { return rooms.get(String(roomCode || '').trim().toUpperCase()); }
+function player(room, id) { return room.players.get(id); }
+function publicRoom(room) {
+  return {
+    code: room.code, status: room.status, hostId: room.hostId, letter: room.letter, usedLetters: room.usedLetters,
+    rushBy: room.rushBy, rushRemaining: room.rushRemaining,
+    players: [...room.players.values()].map(p => ({ id:p.id, name:p.name, score:p.score, isHost:p.id===room.hostId })),
+    round: room.round, results: room.results, challenges: room.challenges
+  };
 }
-function typoMatch(value, set) {
-  if (value.length < 4) return null;
-  let best = null, bestD = 3;
-  for (const item of set) {
-    if (item[0] !== value[0]) continue;
-    const d = dist(value, item);
-    if (d < bestD) { bestD = d; best = item; if (d === 1) break; }
-  }
-  return bestD <= 1 ? best : null;
-}
+function emitRoom(room) { io.to(room.code).emit('room-state', publicRoom(room)); }
+function startsWithLetter(answer, letter) { return norm(answer).startsWith(String(letter).toLowerCase()); }
+function singular(x) { x=norm(x); if (x.endsWith('ies')) return x.slice(0,-3)+'y'; if (x.endsWith('es')) return x.slice(0,-2); if (x.endsWith('s') && x.length>3) return x.slice(0,-1); return x; }
+function lev(a,b){ a=norm(a); b=norm(b); const dp=Array(b.length+1).fill(0).map((_,i)=>i); for(let i=1;i<=a.length;i++){ let prev=dp[0]; dp[0]=i; for(let j=1;j<=b.length;j++){ const tmp=dp[j]; dp[j]=Math.min(dp[j]+1, dp[j-1]+1, prev+(a[i-1]===b[j-1]?0:1)); prev=tmp; }} return dp[b.length]; }
+function closeMatch(ans, set) { const a = norm(ans); if (!a || a.length < 3) return null; const first = a[0]; let best=null, bestD=3; for (const item of set) { if (!item.startsWith(first)) continue; if (Math.abs(item.length-a.length)>2) continue; const d=lev(a,item); if (d<bestD) { bestD=d; best=item; if(d<=1) break; } } return bestD<=2 ? best : null; }
+
 function validate(category, raw, letter) {
-  const value = norm(raw);
-  if (!value) return { valid: false, blank: true, canonical: '', typo: false, reason: 'Blank' };
-  if (value[0] !== letter.toLowerCase()) return { valid: false, canonical: value, typo: false, reason: `Must start with ${letter}` };
-
-  const set = DB[category] || new Set();
-  if (set.has(value)) return { valid: true, canonical: value, typo: false, reason: 'Valid' };
-  if (set.has(singular(value))) return { valid: true, canonical: singular(value), typo: false, reason: 'Plural accepted' };
-
-  const typo = typoMatch(value, set);
-  if (typo) return { valid: true, canonical: typo, typo: true, reason: `Spelling close to ${title(typo)}` };
-
-  if (category === 'name' && /^[a-z][a-z-]{1,24}$/.test(value)) return { valid: true, canonical: value, typo: false, reason: 'Accepted name format' };
-  if (category === 'place') {
-    if (BLOCKED_PLACES.some(x => value.includes(x))) return { valid: false, canonical: value, typo: false, reason: 'Not a geographical place' };
-    if (/^[a-z][a-z\s-]{2,40}$/.test(value)) return { valid: true, canonical: value, typo: false, reason: 'Accepted geographical name' };
+  const answer = norm(raw);
+  if (!answer) return { valid:false, canonical:'', typo:false, reason:'blank' };
+  if (!startsWithLetter(answer, letter)) return { valid:false, canonical:answer, typo:false, reason:'wrong letter' };
+  let set = names;
+  if (category==='animal') set = animals;
+  if (category==='place') set = places;
+  if (category==='object') set = objects;
+  if (category==='place') {
+    if (broadNotAllowed.has(answer)) return { valid:false, canonical:answer, typo:false, reason:'too broad' };
+    if ([...bannedPlaceWords].some(w => answer.includes(w))) return { valid:false, canonical:answer, typo:false, reason:'not geographical' };
   }
-  if (category === 'object') {
-    if (ABSTRACT_OBJECTS.includes(value)) return { valid: false, canonical: value, typo: false, reason: 'Not a physical object' };
-    if (/^[a-z0-9][a-z0-9\s-]{1,40}$/.test(value)) return { valid: true, canonical: value, typo: false, reason: 'Accepted physical object' };
-  }
-  if (category === 'animal' && /^[a-z][a-z\s-]{2,40}$/.test(value)) return { valid: true, canonical: value, typo: false, reason: 'Accepted animal-like name' };
+  const sing = singular(answer);
+  if (set.has(answer)) return { valid:true, canonical:answer, typo:false, reason:'valid' };
+  if (set.has(sing)) return { valid:true, canonical:sing, typo:false, reason:'plural accepted' };
+  // object fallback: allow touchable noun phrases if first letter okay and not abstract/obviously non-object
+  if (category==='object' && /^[a-z0-9]+( [a-z0-9]+){0,2}$/.test(answer)) return { valid:true, canonical:answer, typo:false, reason:'physical object fallback' };
+  // place fallback: allow plausible city/region names 4+ chars unless banned
+  if (category==='place' && answer.length>=4 && /^[a-z]+( [a-z]+){0,2}$/.test(answer)) return { valid:true, canonical:answer, typo:false, reason:'geodata fallback' };
+  const cm = closeMatch(answer,set);
+  if (cm) return { valid:true, canonical:cm, typo:true, reason:`typo of ${cm}` };
+  return { valid:false, canonical:answer, typo:false, reason:'not in database' };
+}
 
-  return { valid: false, canonical: value, typo: false, reason: 'Not in database' };
-}
-function newRoom(code, hostId, hostName) {
-  return { code, hostId, status: 'lobby', letter: null, usedLetters: [], players: new Map(), results: [], rush: null, challenge: null };
-}
-function safeRoom(room) {
-  return { code: room.code, hostId: room.hostId, status: room.status, letter: room.letter, usedLetters: room.usedLetters, rush: room.rush, challenge: room.challenge, players: [...room.players.values()].map(p => ({ id:p.id, name:p.name, score:p.score, answers:p.answers || {} })), results: room.results || [] };
-}
-function emitRoom(room) { io.to(room.code).emit('room-state', safeRoom(room)); }
-function makeCode() { do { var c = Array.from({length:4}, () => LETTERS[Math.floor(Math.random()*LETTERS.length)]).join(''); } while (rooms.has(c)); return c; }
-function ensurePlayer(room, socket, name) {
-  if (!room.players.has(socket.id)) room.players.set(socket.id, { id: socket.id, name: name || 'Player', score: 0, answers: {} });
-  return room.players.get(socket.id);
-}
 function scoreRound(room) {
-  const counts = {};
+  const cats = ['name','animal','place','object'];
+  const canonicalCounts = {};
   const validations = {};
   for (const p of room.players.values()) {
     validations[p.id] = {};
-    for (const cat of CATEGORIES) {
-      const val = validate(cat, p.answers?.[cat] || '', room.letter);
-      validations[p.id][cat] = val;
-      if (val.valid) counts[cat + ':' + val.canonical] = (counts[cat + ':' + val.canonical] || 0) + 1;
+    for (const c of cats) {
+      const v = validate(c, p.answers[c] || '', room.letter);
+      validations[p.id][c] = v;
+      if (v.valid) canonicalCounts[`${c}:${v.canonical}`] = (canonicalCounts[`${c}:${v.canonical}`]||0)+1;
     }
   }
-  const results = [];
+  room.results = [];
   for (const p of room.players.values()) {
-    let add = 0; const rows = {};
-    for (const cat of CATEGORIES) {
-      const raw = p.answers?.[cat] || '';
-      const val = validations[p.id][cat];
-      let pts = 0;
-      if (val.valid) { pts = counts[cat + ':' + val.canonical] > 1 ? 5 : 10; if (val.typo) pts = Math.max(0, pts - 1); }
-      add += pts;
-      rows[cat] = { raw, points: pts, ...val };
+    const row = { playerId:p.id, player:p.name, answers:{...p.answers}, scores:{}, validations:validations[p.id], total:0 };
+    for (const c of cats) {
+      const v = validations[p.id][c];
+      let pts=0;
+      if (v.valid) { pts = canonicalCounts[`${c}:${v.canonical}`] > 1 ? 5 : 10; if (v.typo) pts -= 1; }
+      row.scores[c]=pts; row.total += pts;
     }
-    p.score += add;
-    results.push({ playerId:p.id, playerName:p.name, total:add, rows });
+    p.score += row.total;
+    room.results.push(row);
   }
-  room.results = results;
   room.status = 'results';
 }
-function finishRound(room) { if (!room || room.status === 'results' || room.status === 'ended') return; scoreRound(room); emitRoom(room); }
 
 io.on('connection', socket => {
-  socket.on('create-room', ({ name }, cb) => {
-    const code = makeCode(); const room = newRoom(code, socket.id, name || 'Host'); rooms.set(code, room); socket.join(code); ensurePlayer(room, socket, name || 'Host'); emitRoom(room); cb?.({ ok:true, code, playerId:socket.id });
+  socket.on('create-room', ({name}, cb=()=>{}) => {
+    const roomCode = code();
+    const room = { code: roomCode, hostId: socket.id, players: new Map(), status:'lobby', letter:null, usedLetters:[], round:0, results:[], challenges:[], rushBy:null, rushRemaining:null, rushTimer:null };
+    room.players.set(socket.id, { id:socket.id, name:title(name)||'Player', score:0, answers:{name:'',animal:'',place:'',object:''} });
+    rooms.set(roomCode, room); socket.join(roomCode); socket.data.roomCode=roomCode;
+    cb({ ok:true, roomCode }); emitRoom(room);
   });
-  socket.on('join-room', ({ code, name }, cb) => {
-    const clean = String(code || '').trim().toUpperCase(); const room = rooms.get(clean);
-    if (!room) return cb?.({ ok:false, error:'Room not found' });
-    socket.join(clean); ensurePlayer(room, socket, name || 'Player'); emitRoom(room); cb?.({ ok:true, code: clean, playerId:socket.id });
+
+  socket.on('join-room', ({roomCode,name}, cb=()=>{}) => {
+    const codeNorm = String(roomCode||'').trim().toUpperCase(); const room = rooms.get(codeNorm);
+    if (!room) return cb({ ok:false, error:'Room not found. Check the code and make sure you are using the same live URL.' });
+    room.players.set(socket.id, { id:socket.id, name:title(name)||'Player', score:0, answers:{name:'',animal:'',place:'',object:''} });
+    socket.join(codeNorm); socket.data.roomCode=codeNorm; cb({ ok:true, roomCode:codeNorm }); emitRoom(room);
   });
-  socket.on('start-round', ({ code }, cb) => {
-    const room = rooms.get(String(code||'').toUpperCase()); if (!room) return cb?.({ ok:false, error:'Room not found' });
-    if (socket.id !== room.hostId) return cb?.({ ok:false, error:'Only host can start' });
-    const pool = LETTERS.filter(l => !room.usedLetters.includes(l)); if (!pool.length) return cb?.({ ok:false, error:'All letters used' });
-    const letter = pool[Math.floor(Math.random()*pool.length)]; room.letter = letter; room.usedLetters.push(letter); room.status = 'active'; room.results = []; room.rush = null; room.challenge = null;
-    for (const p of room.players.values()) p.answers = {};
-    emitRoom(room); cb?.({ ok:true, letter });
+
+  socket.on('start-round', (cb=()=>{}) => {
+    const room = getRoom(socket.data.roomCode); if (!room) return cb({ok:false,error:'Room not found'});
+    if (room.hostId !== socket.id) return cb({ok:false,error:'Only host can start'});
+    const available = alphabet.filter(l => !room.usedLetters.includes(l));
+    if (!available.length) return cb({ok:false,error:'All letters used'});
+    room.letter = available[Math.floor(Math.random()*available.length)]; room.usedLetters.push(room.letter); room.round++;
+    room.status='playing'; room.results=[]; room.challenges=[]; room.rushBy=null; room.rushRemaining=null;
+    if (room.rushTimer) clearInterval(room.rushTimer);
+    for (const p of room.players.values()) p.answers = {name:'',animal:'',place:'',object:''};
+    cb({ok:true}); emitRoom(room); io.to(room.code).emit('clear-inputs');
   });
-  socket.on('answer-update', ({ code, answers }, cb) => {
-    const room = rooms.get(String(code||'').toUpperCase()); if (!room) return cb?.({ ok:false }); const p = room.players.get(socket.id); if (!p) return cb?.({ ok:false });
-    p.answers = {}; for (const cat of CATEGORIES) p.answers[cat] = String(answers?.[cat] || ''); emitRoom(room); cb?.({ ok:true });
+
+  socket.on('save-answers', ({answers}) => {
+    const room = getRoom(socket.data.roomCode); if (!room || room.status!=='playing') return;
+    const p = player(room, socket.id); if (!p) return;
+    p.answers = { name:String(answers?.name||''), animal:String(answers?.animal||''), place:String(answers?.place||''), object:String(answers?.object||'') };
+    emitRoom(room);
   });
-  socket.on('rush', ({ code }, cb) => {
-    const room = rooms.get(String(code||'').toUpperCase()); if (!room || room.status !== 'active') return cb?.({ ok:false }); const p = room.players.get(socket.id); if (!p) return cb?.({ ok:false });
-    if (room.rush) return cb?.({ ok:false, error:'Rush already active' });
-    room.rush = { byId: p.id, byName: p.name, endsAt: Date.now() + 5000 }; emitRoom(room); io.to(room.code).emit('rush-started', room.rush); setTimeout(() => finishRound(room), 5100); cb?.({ ok:true });
+
+  socket.on('rush', () => {
+    const room = getRoom(socket.data.roomCode); if (!room || room.status!=='playing' || room.rushTimer) return;
+    const p=player(room,socket.id); if(!p) return;
+    const filled = ['name','animal','place','object'].every(c => norm(p.answers[c]||'')); if(!filled) return;
+    room.rushBy=p.name; room.rushRemaining=5; io.to(room.code).emit('rush-started', {by:p.name, remaining:5}); emitRoom(room);
+    room.rushTimer=setInterval(()=>{ room.rushRemaining--; io.to(room.code).emit('rush-tick',{by:p.name,remaining:room.rushRemaining}); if(room.rushRemaining<=0){ clearInterval(room.rushTimer); room.rushTimer=null; scoreRound(room); io.to(room.code).emit('round-locked'); emitRoom(room); } },1000);
   });
-  socket.on('challenge', ({ code, targetId, category }, cb) => {
-    const room = rooms.get(String(code||'').toUpperCase()); if (!room || room.status !== 'results') return cb?.({ ok:false, error:'No results yet' });
-    if (socket.id !== targetId) return cb?.({ ok:false, error:'You can only challenge your own answer' });
-    const res = room.results.find(r => r.playerId === targetId); if (!res || !CATEGORIES.includes(category)) return cb?.({ ok:false, error:'Invalid challenge' });
-    const p = room.players.get(socket.id);
-    room.challenge = { id: Date.now().toString(36), challengerId: socket.id, challengerName: p.name, targetId, targetName: res.playerName, category, answer: res.rows[category].raw || '', votes: {}, createdAt: Date.now() };
-    emitRoom(room); io.to(room.code).emit('challenge-popup', room.challenge); cb?.({ ok:true });
+
+  socket.on('manual-score', () => { const room=getRoom(socket.data.roomCode); if(!room||room.hostId!==socket.id||room.status!=='playing') return; if(room.rushTimer) clearInterval(room.rushTimer); scoreRound(room); emitRoom(room); });
+
+  socket.on('challenge-answer', ({playerId, category}, cb=()=>{}) => {
+    const room=getRoom(socket.data.roomCode); if(!room || room.status!=='results') return cb({ok:false,error:'No results to challenge'});
+    // User can ONLY challenge their OWN answer.
+    if (socket.id !== playerId) return cb({ok:false,error:'You can only challenge your own answer'});
+    const row=room.results.find(r=>r.playerId===playerId); if(!row) return cb({ok:false,error:'Answer not found'});
+    const ch={ id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), challengerId:socket.id, challengerName:player(room,socket.id)?.name||'Player', playerId, playerName:row.player, category, answer:row.answers[category]||'', votes:{}, open:true };
+    room.challenges.push(ch); cb({ok:true}); io.to(room.code).emit('challenge-popup', ch); emitRoom(room);
   });
-  socket.on('vote', ({ code, challengeId, vote }, cb) => {
-    const room = rooms.get(String(code||'').toUpperCase()); if (!room?.challenge || room.challenge.id !== challengeId) return cb?.({ ok:false, error:'No challenge' });
-    if (socket.id === room.challenge.challengerId) return cb?.({ ok:false, error:'You cannot vote on your own challenge' });
-    if (!['count','reject'].includes(vote)) return cb?.({ ok:false });
-    room.challenge.votes[socket.id] = vote; emitRoom(room); cb?.({ ok:true });
+
+  socket.on('vote-challenge', ({challengeId, vote}, cb=()=>{}) => {
+    const room=getRoom(socket.data.roomCode); if(!room) return cb({ok:false,error:'Room not found'});
+    const ch=room.challenges.find(c=>c.id===challengeId && c.open); if(!ch) return cb({ok:false,error:'Challenge closed'});
+    if (ch.challengerId === socket.id) return cb({ok:false,error:'You cannot vote on your own challenge'});
+    ch.votes[socket.id] = vote === 'valid' ? 'valid' : 'invalid';
+    const eligible = room.players.size - 1; const count=Object.keys(ch.votes).length;
+    if (eligible <= 0 || count >= eligible) ch.open=false;
+    cb({ok:true}); emitRoom(room);
   });
-  socket.on('end-game', ({ code }, cb) => {
-    const room = rooms.get(String(code||'').toUpperCase()); if (!room) return cb?.({ ok:false }); if (socket.id !== room.hostId) return cb?.({ ok:false, error:'Only host can end' }); room.status = 'ended'; emitRoom(room); cb?.({ ok:true });
-  });
-  socket.on('disconnect', () => { for (const room of rooms.values()) { if (room.players.delete(socket.id)) { if (room.hostId === socket.id) room.hostId = room.players.values().next().value?.id || null; if (!room.players.size) rooms.delete(room.code); else emitRoom(room); } } });
+
+  socket.on('end-game', () => { const room=getRoom(socket.data.roomCode); if(!room||room.hostId!==socket.id) return; room.status='ended'; emitRoom(room); });
+  socket.on('disconnect', () => { const room=getRoom(socket.data.roomCode); if(!room) return; room.players.delete(socket.id); if(room.hostId===socket.id) room.hostId=[...room.players.keys()][0]||null; if(room.players.size===0) { if(room.rushTimer) clearInterval(room.rushTimer); rooms.delete(room.code); } else emitRoom(room); });
 });
 
 server.listen(PORT, '0.0.0.0', () => console.log(`Category Rush running on port ${PORT}`));
